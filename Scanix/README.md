@@ -39,62 +39,11 @@ A beautiful, modern document scanner app for iOS built with SwiftUI, SwiftData, 
 - **Context Menu Actions**: Long-press thumbnails for quick actions
 - **Visual Feedback**: Selected pages are highlighted for clarity
 
-## Technical Details
-
-### Architecture
-- **SwiftUI**: Modern declarative UI framework
-- **SwiftData**: Persistent storage with `@Model` classes
-- **VisionKit**: Native document scanning capabilities
-- **PDFKit**: PDF generation and handling
-- **Swift Concurrency**: Async/await for smooth operations
-
-### Data Models
-
-#### Scan
-- `id`: Unique identifier
-- `name`: User-editable scan name
-- `timestamp`: Creation date
-- `pages`: Collection of ScanPage objects
-
-#### ScanPage
-- `id`: Unique identifier
-- `imageData`: Compressed JPEG data
-- `orderIndex`: Position in the scan
-- `timestamp`: Creation date
-
-### Key Components
-
-1. **ContentView**: Home screen with search and scan list
-2. **ScanDetailView**: View and edit individual scans
-3. **DocumentScannerView**: UIKit wrapper for VNDocumentCameraViewController
-4. **NameGenerator**: Generates fun, random names for scans
-5. **PDFExporter**: Creates PDF documents from images
-
 ## Requirements
 
-- iOS 18.0+ (for full Liquid Glass support)
-- Xcode 16.0+
+- iOS 26.1+ (for full Liquid Glass support)
+- Xcode 26.1+
 - Swift 6.0+
-
-## Permissions Required
-
-Add these to your `Info.plist`:
-
-```xml
-<key>NSCameraUsageDescription</key>
-<string>Scanix needs camera access to scan documents</string>
-
-<key>NSPhotoLibraryAddUsageDescription</key>
-<string>Scanix needs permission to save scanned documents to your Photos library</string>
-```
-
-## Setup Instructions
-
-1. **Clone or create the project**
-2. **Add required capabilities**:
-   - No special entitlements needed
-3. **Build and run on iOS 18+ device or simulator**
-4. **Grant camera and photo library permissions when prompted**
 
 ## Usage
 
