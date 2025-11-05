@@ -16,6 +16,7 @@ struct ContentView: View {
     @State private var searchText = ""
     @State private var showScanner = false
     @State private var scannedImages: [UIImage] = []
+    @State private var navigationPath = NavigationPath()
     
     private var filteredScans: [Scan] {
         if searchText.isEmpty {
@@ -30,7 +31,7 @@ struct ContentView: View {
     }
     
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             ScrollView {
                 VStack(spacing: 24) {
                     // New Scan Button - Prominent
@@ -71,14 +72,22 @@ struct ContentView: View {
             .navigationTitle("Scanix")
             .searchable(text: $searchText, prompt: "Search scans")
             .searchToolbarBehavior(.minimize)
+            .navigationDestination(for: Scan.self) { scan in
+                ScanDetailView(scan: scan)
+            }
             .sheet(isPresented: $showScanner) {
                 DocumentScannerView(isPresented: $showScanner, scannedImages: $scannedImages)
                     .ignoresSafeArea()
             }
             .onChange(of: scannedImages) { oldValue, newValue in
                 if !newValue.isEmpty {
-                    saveScannedImages(newValue)
+                    let newScan = saveScannedImages(newValue)
                     scannedImages = []
+                    
+                    // Небольшая задержка для плавного перехода после закрытия сканера
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        navigationPath.append(newScan)
+                    }
                 }
             }
         }
@@ -87,12 +96,8 @@ struct ContentView: View {
     // MARK: - Subviews
     
     private var newScanButton: some View {
-        NavigationLink {
-            // This will open the scanner
-            Color.clear
-                .onAppear {
-                    showScanner = true
-                }
+        Button {
+            showScanner = true
         } label: {
             HStack(spacing: 16) {
                 Image(systemName: "doc.text.viewfinder")
@@ -129,8 +134,8 @@ struct ContentView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 16) {
                 ForEach(recentScans) { scan in
-                    NavigationLink {
-                        ScanDetailView(scan: scan)
+                    Button {
+                        navigationPath.append(scan)
                     } label: {
                         ScanCardView(scan: scan, isCompact: true)
                     }
@@ -144,8 +149,8 @@ struct ContentView: View {
     private var allScansList: some View {
         VStack(spacing: 12) {
             ForEach(filteredScans) { scan in
-                NavigationLink {
-                    ScanDetailView(scan: scan)
+                Button {
+                    navigationPath.append(scan)
                 } label: {
                     ScanCardView(scan: scan, isCompact: false)
                 }
@@ -197,20 +202,20 @@ struct ContentView: View {
     
     // MARK: - Actions
     
-    private func saveScannedImages(_ images: [UIImage]) {
-        withAnimation {
-            let newScan = Scan(name: NameGenerator.generateRandomName())
-            
-            for (index, image) in images.enumerated() {
-                if let imageData = image.jpegData(compressionQuality: 0.8) {
-                    let page = ScanPage(imageData: imageData, orderIndex: index)
-                    newScan.pages.append(page)
-                }
+    private func saveScannedImages(_ images: [UIImage]) -> Scan {
+        let newScan = Scan(name: NameGenerator.generateRandomName())
+        
+        for (index, image) in images.enumerated() {
+            if let imageData = image.jpegData(compressionQuality: 0.8) {
+                let page = ScanPage(imageData: imageData, orderIndex: index)
+                newScan.pages.append(page)
             }
-            
-            modelContext.insert(newScan)
-            try? modelContext.save()
         }
+        
+        modelContext.insert(newScan)
+        try? modelContext.save()
+        
+        return newScan
     }
 }
 
