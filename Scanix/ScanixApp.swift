@@ -12,7 +12,8 @@ import SwiftData
 struct ScanixApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            Item.self,
+            Scan.self,
+            ScanPage.self
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 

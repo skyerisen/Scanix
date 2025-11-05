@@ -161,7 +161,6 @@ struct ScanDetailView: View {
         }
         .tabViewStyle(.page(indexDisplayMode: .always))
         .frame(height: 500)
-        .glassEffect(.regular)
     }
     
     private var pageThumbnails: some View {
@@ -220,7 +219,6 @@ struct ScanDetailView: View {
                     }
                 }
                 .buttonStyle(.plain)
-                .glassEffect(.regular.tint(.blue).interactive())
             }
         }
     }
@@ -239,7 +237,6 @@ struct ScanDetailView: View {
                 RoundedRectangle(cornerRadius: 12)
                     .fill(Color(.systemBackground))
             }
-            .glassEffect(.regular)
         }
     }
     
