@@ -119,7 +119,7 @@ struct ContentView: View {
             }
             .padding(24)
             .frame(maxWidth: .infinity)
-            .glassEffect(.regular.tint(.blue).interactive())
+            .glassEffect(.regular.tint(.accentColor).interactive())
             .padding(.horizontal)
         }
         .buttonStyle(.plain)
@@ -245,12 +245,12 @@ struct ScanCardView: View {
                     .aspectRatio(contentMode: .fill)
                     .frame(width: 140, height: 180)
                     .clipped()
-                    .cornerRadius(12)
+                    .cornerRadius(8)
             } else {
                 Rectangle()
                     .fill(Color.gray.opacity(0.2))
                     .frame(width: 140, height: 180)
-                    .cornerRadius(12)
+                    .cornerRadius(8)
                     .overlay {
                         Image(systemName: "doc.text")
                             .font(.system(size: 40))

@@ -160,7 +160,7 @@ struct ScanDetailView: View {
             }
         }
         .tabViewStyle(.page(indexDisplayMode: .always))
-        .frame(height: 500)
+        .frame(height: 480)
     }
     
     private var pageThumbnails: some View {
@@ -193,7 +193,7 @@ struct ScanDetailView: View {
                         )
                     }
                 }
-                .padding(.horizontal)
+                .padding()
             }
         }
     }
@@ -370,7 +370,7 @@ struct ThumbnailView: View {
                 .cornerRadius(8)
                 .overlay {
                     RoundedRectangle(cornerRadius: 8)
-                        .stroke(isSelected ? Color.blue : Color.clear, lineWidth: 3)
+                        .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 3)
                 }
             }
             .contextMenu {
@@ -412,7 +412,7 @@ struct InfoRow: View {
     var body: some View {
         HStack {
             Image(systemName: icon)
-                .foregroundStyle(.blue)
+                .foregroundStyle(.accent)
                 .frame(width: 24)
             
             Text(label)
