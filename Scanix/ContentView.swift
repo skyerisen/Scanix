@@ -11,12 +11,14 @@ import VisionKit
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Query(sort: \Scan.timestamp, order: .reverse) private var scans: [Scan]
     
     @State private var searchText = ""
     @State private var showScanner = false
     @State private var scannedImages: [UIImage] = []
     @State private var navigationPath = NavigationPath()
+    @State private var selectedScan: Scan?
     
     private var filteredScans: [Scan] {
         if searchText.isEmpty {
@@ -30,7 +32,118 @@ struct ContentView: View {
         Array(scans.prefix(5))
     }
     
+    private var isIPad: Bool {
+        horizontalSizeClass == .regular
+    }
+    
     var body: some View {
+        if isIPad {
+            iPadLayout
+        } else {
+            iPhoneLayout
+        }
+    }
+    
+    // MARK: - iPad Layout
+    
+    private var iPadLayout: some View {
+        NavigationSplitView {
+            sidebarContent
+        } detail: {
+            if let selectedScan = selectedScan {
+                ScanDetailView(scan: selectedScan)
+            } else {
+                detailPlaceholder
+            }
+        }
+        .sheet(isPresented: $showScanner) {
+            DocumentScannerView(isPresented: $showScanner, scannedImages: $scannedImages)
+                .ignoresSafeArea()
+        }
+        .onChange(of: scannedImages) { oldValue, newValue in
+            if !newValue.isEmpty {
+                let newScan = saveScannedImages(newValue)
+                scannedImages = []
+                
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    selectedScan = newScan
+                }
+            }
+        }
+    }
+    
+    private var sidebarContent: some View {
+        List(selection: $selectedScan) {
+            Section {
+                Button {
+                    showScanner = true
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "doc.text.viewfinder")
+                            .font(.title2)
+                            .foregroundStyle(.white)
+                            .frame(width: 44, height: 44)
+                            .background {
+                                Circle()
+                                    .fill(Color.accentColor)
+                            }
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("New Scan")
+                                .font(.headline)
+                                .foregroundStyle(.primary)
+                            
+                            Text("Capture documents")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        
+                        Spacer()
+                    }
+                    .padding(.vertical, 8)
+                }
+                .buttonStyle(.plain)
+            }
+            
+            if !filteredScans.isEmpty {
+                Section {
+                    ForEach(filteredScans) { scan in
+                        ScanRowView(scan: scan)
+                            .tag(scan)
+                    }
+                } header: {
+                    Text(searchText.isEmpty ? "All Scans" : "Search Results")
+                }
+            }
+        }
+        .navigationTitle("Scanix")
+        .searchable(text: $searchText, prompt: "Search scans")
+    }
+    
+    private var detailPlaceholder: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "doc.text.magnifyingglass")
+                .font(.system(size: 80))
+                .foregroundStyle(.gray.opacity(0.5))
+            
+            VStack(spacing: 8) {
+                Text("No Scan Selected")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                
+                Text("Select a scan from the sidebar or create a new one")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(.systemGroupedBackground))
+    }
+    
+    // MARK: - iPhone Layout
+    
+    private var iPhoneLayout: some View {
         NavigationStack(path: $navigationPath) {
             ScrollView {
                 VStack(spacing: 24) {
@@ -84,7 +197,6 @@ struct ContentView: View {
                     let newScan = saveScannedImages(newValue)
                     scannedImages = []
                     
-                    // Небольшая задержка для плавного перехода после закрытия сканера
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                         navigationPath.append(newScan)
                     }
@@ -123,11 +235,12 @@ struct ContentView: View {
                     .foregroundStyle(.white.opacity(0.6))
             }
             .padding(24)
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: isIPad ? 600 : .infinity)
             .glassEffect(.regular.tint(.accentColor).interactive())
             .padding(.horizontal)
         }
         .buttonStyle(.plain)
+        .frame(maxWidth: .infinity)
     }
     
     private var recentScansGrid: some View {
@@ -147,17 +260,37 @@ struct ContentView: View {
     }
     
     private var allScansList: some View {
-        VStack(spacing: 12) {
-            ForEach(filteredScans) { scan in
-                Button {
-                    navigationPath.append(scan)
-                } label: {
-                    ScanCardView(scan: scan, isCompact: false)
+        Group {
+            if isIPad {
+                // Grid layout for iPad
+                LazyVGrid(columns: [
+                    GridItem(.adaptive(minimum: 300), spacing: 16)
+                ], spacing: 16) {
+                    ForEach(filteredScans) { scan in
+                        Button {
+                            navigationPath.append(scan)
+                        } label: {
+                            ScanCardView(scan: scan, isCompact: false)
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
-                .buttonStyle(.plain)
+                .padding(.horizontal)
+            } else {
+                // Vertical list for iPhone
+                VStack(spacing: 12) {
+                    ForEach(filteredScans) { scan in
+                        Button {
+                            navigationPath.append(scan)
+                        } label: {
+                            ScanCardView(scan: scan, isCompact: false)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal)
             }
         }
-        .padding(.horizontal)
     }
     
     private var emptyStateView: some View {
@@ -216,6 +349,65 @@ struct ContentView: View {
         try? modelContext.save()
         
         return newScan
+    }
+}
+
+// MARK: - Scan Row View (iPad Sidebar)
+
+struct ScanRowView: View {
+    let scan: Scan
+    
+    private var pageCount: Int {
+        scan.pages.count
+    }
+    
+    private var thumbnailImage: UIImage? {
+        scan.pages.sorted { $0.orderIndex < $1.orderIndex }.first?.image
+    }
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            // Thumbnail
+            if let thumbnail = thumbnailImage {
+                Image(uiImage: thumbnail)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 50, height: 60)
+                    .clipped()
+                    .cornerRadius(6)
+            } else {
+                Rectangle()
+                    .fill(Color.gray.opacity(0.2))
+                    .frame(width: 50, height: 60)
+                    .cornerRadius(6)
+                    .overlay {
+                        Image(systemName: "doc.text")
+                            .font(.system(size: 20))
+                            .foregroundStyle(.gray.opacity(0.5))
+                    }
+            }
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(scan.name)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .lineLimit(1)
+                
+                HStack(spacing: 8) {
+                    Text("\(pageCount) page\(pageCount == 1 ? "" : "s")")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    
+                    Text("•")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    
+                    Text(scan.timestamp, format: .dateTime.month().day())
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
     }
 }
 
